@@ -130,7 +130,7 @@ def result(job_id: str):
         return jsonify({"ok": False, "error": "Missing video_path"}), 400
 
     return send_file(video_path, as_attachment=True)
-from queue import queue
+from rq_queue import queue
 from app.jobs.lecture_job import run_lecture_job
 
 @api.post("/jobs/<job_id>/generate")
