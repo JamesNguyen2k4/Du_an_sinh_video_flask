@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Sinh video bài giảng - Index</title>
+
+  <link rel="stylesheet" href="/static/css/app.css"/>
+</head>
+<body>
+  <div class="container">
+    <h1>Sinh video bài giảng</h1>
+
+    <div class="card">
+      <h2>1) Ảnh giảng viên</h2>
+      <input id="source_image" type="file" accept="image/*"/>
+    </div>
+
+    <div class="card">
+      <h2>2) PowerPoint</h2>
+      <input id="pptx" type="file" accept=".pptx"/>
+    </div>
+
+    <div class="card">
+      <h2>3) Chế độ giọng đọc</h2>
+
+      <label>Chế độ</label>
+      <select id="voice_mode">
+        <option value="builtin">Ngôn ngữ có sẵn</option>
+        <option value="clone">Giọng nhân bản</option>
+      </select>
+
+      <div class="grid">
+        <div>
+          <h3>Giọng có sẵn</h3>
+
+          <label>Ngôn ngữ</label>
+          <select id="audio_language">
+            <option value="vi">vi</option>
+            <option value="en">en</option>
+            <option value="zh">zh</option>
+            <option value="ja">ja</option>
+            <option value="ko">ko</option>
+            <option value="fr">fr</option>
+            <option value="de">de</option>
+            <option value="es">es</option>
+            <option value="it">it</option>
+            <option value="pt">pt</option>
+          </select>
+
+          <label>Giới tính</label>
+          <select id="gender">
+            <option value="Nữ">Nữ</option>
+            <option value="Nam">Nam</option>
+          </select>
+
+          <label>Giọng cụ thể (tùy chọn)</label>
+          <input id="builtin_voice" placeholder="để trống nếu không chọn"/>
+        </div>
+
+        <div>
+          <h3>Giọng nhân bản (XTTS)</h3>
+
+          <label>MP3 giọng mẫu</label>
+          <input id="voice_sample" type="file" accept=".mp3,audio/*"/>
+
+          <button id="btn-clone" type="button">Tạo bản giọng clone</button>
+
+          <label>Chọn bản clone</label>
+          <select id="cloned_voice_name">
+            <option value="">-- Chọn giọng --</option>
+          </select>
+
+          <label>Ngôn ngữ nội dung (XTTS)</label>
+          <select id="cloned_lang">
+            <option value="vi">vi</option>
+            <option value="en">en</option>
+            <option value="zh">zh</option>
+            <option value="ja">ja</option>
+            <option value="ko">ko</option>
+            <option value="fr">fr</option>
+            <option value="de">de</option>
+            <option value="es">es</option>
+            <option value="it">it</option>
+            <option value="pt">pt</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card actions">
+      <button id="btn-next" type="button" class="primary">Tiếp tục (sang Editor)</button>
+      <p id="status" class="status"></p>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

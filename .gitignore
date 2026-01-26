@@ -1,0 +1,9 @@
+# Ignore checkpoints directory
+checkpoints/
+results/
+__pycache__/
+gfpgan/
+scripts/gfpgan/
+*.pyc
+cloned_voices/
+venv/

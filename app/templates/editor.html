@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Editor - chỉnh sửa nội dung</title>
+
+  <link rel="stylesheet" href="/static/css/app.css"/>
+</head>
+<body>
+  <div class="container">
+    <h1>Editor nội dung slide</h1>
+
+    <div class="card">
+      <p>
+        Nội dung sẽ được trích xuất từ PPTX (hoặc bạn chỉnh sửa lại trước khi sinh video).
+      </p>
+
+      <textarea id="slides_text" rows="18" placeholder="## Slide 1&#10;..."></textarea>
+
+      <div class="row">
+        <button id="btn-save" type="button">Lưu nội dung</button>
+        <button id="btn-generate" type="button" class="primary">Sinh video</button>
+      </div>
+
+      <p id="status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <a href="/" class="link">← Quay lại Index</a>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
