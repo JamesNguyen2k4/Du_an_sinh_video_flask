@@ -1,6 +1,6 @@
 # app/jobs/lecture_job.py
+import os
 import time
-from dataclasses import asdict
 
 from app.services.storage_service import StorageService
 from app.services.lecture_service import LectureParams, build_lecture_from_inputs
@@ -9,6 +9,10 @@ from app.services.sadtalker_service import SadTalkerService
 
 def run_lecture_job(job_id: str) -> dict:
     store = StorageService()
+
+    # ✅ đảm bảo thư mục results/<job_id> tồn tại (kể cả khi job_id không qua /jobs)
+    os.makedirs(store.job_result_dir(job_id), exist_ok=True)
+
     cfg = store.load_job_config(job_id)
 
     source_image = store.get_uploaded(job_id, "source_image")
@@ -27,7 +31,6 @@ def run_lecture_job(job_id: str) -> dict:
 
     store.write_progress(job_id, {"state": "running", "message": "Starting...", "updated_at": int(time.time())})
 
-    # build params từ config.json
     params = LectureParams(
         language=cfg.get("language", "vi"),
         voice_mode=cfg.get("voice_mode", "builtin"),
@@ -44,27 +47,44 @@ def run_lecture_job(job_id: str) -> dict:
         speech_rate=float(cfg.get("speech_rate", 1.0)),
     )
 
-    # SadTalker instance (service wrapper)
     sad_service = SadTalkerService()
-
-    # IMPORTANT: build_lecture_from_inputs hiện đang gọi sad_talker.test(...)
-    # -> bạn truyền sad_service._sad hoặc sửa lecture_service dùng SadTalkerService.
-    # Cách nhanh: truyền sad_service._sad để giữ code lecture_service hiện tại.
     sad_talker_obj = sad_service._sad
 
-    video_path, status = build_lecture_from_inputs(
-        sad_talker=sad_talker_obj,
-        pptx_path=pptx,
-        source_image_path=source_image,
-        params=params,
-        user_slides_text=slides_text,
-        job_id=job_id,
-        progress_cb=progress_cb
-    )
+    try:
+        video_path, status = build_lecture_from_inputs(
+            sad_talker=sad_talker_obj,
+            pptx_path=pptx,
+            source_image_path=source_image,
+            params=params,
+            user_slides_text=slides_text,
+            job_id=job_id,
+            progress_cb=progress_cb
+        )
+    except Exception as e:
+        store.write_progress(job_id, {
+            "state": "failed",
+            "message": f"Exception: {e}",
+            "updated_at": int(time.time())
+        })
+        return {"ok": False, "status": str(e)}
 
     if not video_path:
         store.write_progress(job_id, {"state": "failed", "message": status, "updated_at": int(time.time())})
         return {"ok": False, "status": status}
+
+    # ✅ normalize tuyệt đối để Flask send_file không bị lệch path theo cwd/app/
+    video_path = os.path.abspath(video_path)
+
+    # ✅ nếu file chưa tồn tại thật, fail luôn để UI không gọi result bị 500
+    if not os.path.exists(video_path):
+        store.write_progress(job_id, {
+            "state": "failed",
+            "message": "Video path returned but file not found on disk",
+            "video_path": video_path,
+            "cwd": os.getcwd(),
+            "updated_at": int(time.time())
+        })
+        return {"ok": False, "status": "video file not found", "video_path": video_path}
 
     store.write_progress(job_id, {
         "state": "done",

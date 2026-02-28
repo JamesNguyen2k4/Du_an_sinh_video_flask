@@ -1,6 +1,7 @@
 # app/routes/api.py
 from flask import Blueprint, request, jsonify, send_file
-
+import os
+import threading
 from app.services.storage_service import StorageService
 from app.services.pptx_service import extract_slides_from_pptx, format_slides_as_text
 from app.services.tts_service import TTSService
@@ -122,6 +123,7 @@ def status(job_id: str):
 def result(job_id: str):
     store = StorageService()
     prog = store.read_progress(job_id)
+
     if prog.get("state") != "done":
         return jsonify({"ok": False, "error": "Not ready", "status": prog}), 400
 
@@ -129,12 +131,50 @@ def result(job_id: str):
     if not video_path:
         return jsonify({"ok": False, "error": "Missing video_path"}), 400
 
+    # normalize + check
+    video_path = os.path.abspath(video_path)
+    if not os.path.isfile(video_path):
+        return jsonify({
+            "ok": False,
+            "error": "video file not found",
+            "video_path": video_path
+        }), 404
+
     return send_file(video_path, as_attachment=True)
-from rq_queue import queue
+
+
 from app.jobs.lecture_job import run_lecture_job
 
 @api.post("/jobs/<job_id>/generate")
 def generate(job_id: str):
-    # enqueue background job
-    rq_job = queue.enqueue(run_lecture_job, job_id, job_timeout=60*60)  # 1h
-    return jsonify({"ok": True, "rq_id": rq_job.id})
+    store = StorageService()
+
+    # (tuỳ chọn) chặn chạy lại nếu job đang running
+    prog = store.read_progress(job_id) or {}
+    if prog.get("state") in ("running", "queued"):
+        return jsonify({"ok": True, "status": prog}), 200
+
+    # ghi trạng thái queued trước khi chạy
+    store.write_progress(job_id, {
+        "state": "queued",
+        "message": "Queued...",
+        "updated_at": int(__import__("time").time())
+    })
+
+    def _runner():
+        try:
+            run_lecture_job(job_id)
+        except Exception as e:
+            # đảm bảo nếu crash vẫn ghi failed
+            store.write_progress(job_id, {
+                "state": "failed",
+                "message": f"Job crashed: {e}",
+                "updated_at": int(__import__("time").time())
+            })
+
+    # ⚠️ Flask debug reloader có thể spawn 2 process → có thể chạy job 2 lần.
+    # Cách chống: chỉ start thread ở process chính của Werkzeug
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or os.environ.get("FLASK_ENV") != "development":
+        threading.Thread(target=_runner, daemon=True).start()
+
+    return jsonify({"ok": True, "job_id": job_id})

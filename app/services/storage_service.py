@@ -118,6 +118,7 @@ class StorageService:
 
     def save_slides_text(self, job_id: str, text: str) -> str:
         path = self.result_path(job_id, "slides_text.md")
+        _ensure_dir(os.path.dirname(path))
         with open(path, "w", encoding="utf-8") as f:
             f.write(text or "")
         return path
@@ -131,6 +132,7 @@ class StorageService:
 
     def save_slides_data(self, job_id: str, slides_data: list[dict]) -> str:
         path = self.result_path(job_id, "slides_data.json")
+        _ensure_dir(os.path.dirname(path))
         with open(path, "w", encoding="utf-8") as f:
             json.dump(slides_data or [], f, ensure_ascii=False, indent=2)
         return path
@@ -145,6 +147,7 @@ class StorageService:
     # ---- Progress ----
     def write_progress(self, job_id: str, payload: dict) -> str:
         path = self.result_path(job_id, "progress.json")
+        _ensure_dir(os.path.dirname(path))  
         with open(path, "w", encoding="utf-8") as f:
             json.dump(payload or {}, f, ensure_ascii=False, indent=2)
         return path

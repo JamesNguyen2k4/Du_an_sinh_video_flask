@@ -6,4 +6,6 @@ gfpgan/
 scripts/gfpgan/
 *.pyc
 cloned_voices/
-venv/
+.venv/
+tmp/
+uploads/

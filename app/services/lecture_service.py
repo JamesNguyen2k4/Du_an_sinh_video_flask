@@ -264,11 +264,12 @@ class LectureParams:
 
 
 def generate_teacher_video(
-    sad_talker,
+    sad_service: SadTalkerService,   # ✅ dùng service wrapper
     source_image_path: str,
     text: str,
     params: LectureParams,
     tts_service: TTSService,
+    job_id: Optional[str] = None,    # ✅ thêm job_id
     pre_synth_audio_path: Optional[str] = None
 ) -> Optional[str]:
     """
@@ -358,7 +359,7 @@ def create_lecture_video(
     """
     cfg = get_config()
     tts_service = TTSService()
-
+    sad_service = SadTalkerService()    
     if not slides_data:
         return None, "❌ Không có slide nào để xử lý!"
 
@@ -423,11 +424,12 @@ def create_lecture_video(
 
         # 2) generate teacher video using pre_synth_audio
         teacher_video_path = generate_teacher_video(
-            sad_talker=sad_talker,
+            sad_service=sad_service,
             source_image_path=safe_image_path,
             text=slide_data.get("text", ""),
             params=params,
             tts_service=tts_service,
+            job_id=job_id,
             pre_synth_audio_path=audio_path
         )
         cleanup_cuda_memory()
@@ -525,16 +527,18 @@ def create_lecture_video(
         except Exception:
             pass
 
-    # cleanup temp SadTalker dirs (uuid-like) — bạn có thể để, hoặc làm scheduled cleanup
+    # cleanup ONLY SadTalker subfolders inside this job
     try:
-        results_dir = cfg.RESULTS_DIR
-        for item in os.listdir(results_dir):
-            p = os.path.join(results_dir, item)
-            if os.path.isdir(p) and len(item) == 36 and "-" in item:
-                try:
-                    shutil.rmtree(p)
-                except Exception:
-                    pass
+        sadtalker_root = os.path.join(cfg.RESULTS_DIR, job_id or "", "sadtalker")
+        if os.path.isdir(sadtalker_root):
+            for item in os.listdir(sadtalker_root):
+                p = os.path.join(sadtalker_root, item)
+                # SadTalker creates uuid subfolders here
+                if os.path.isdir(p) and len(item) == 36 and "-" in item:
+                    try:
+                        shutil.rmtree(p)
+                    except Exception:
+                        pass
     except Exception:
         pass
 
