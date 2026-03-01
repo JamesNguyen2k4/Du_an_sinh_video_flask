@@ -52,8 +52,7 @@ async function api(url, opts = {}) {
   
     let jobId = loadJobId();
   
-    async function ensureJob() {
-      if (jobId) return jobId;
+    async function createNewJob() {
       const created = await api("/api/jobs", { method: "POST" });
       jobId = created.job_id;
       storeJobId(jobId);
@@ -99,7 +98,7 @@ async function api(url, opts = {}) {
   
     btnNext.addEventListener("click", async () => {
       try {
-        await ensureJob();
+        await createNewJob()
   
         const img = imgInput?.files?.[0];
         const pptx = pptxInput?.files?.[0];
@@ -202,7 +201,7 @@ async function api(url, opts = {}) {
           });
   
           const out = await api(`/api/jobs/${jobId}/generate`, { method: "POST" });
-          setText(status, `✅ Đã chạy job (${out.rq_id}). Đang xử lý...`);
+          setText(status, `✅ Đã chạy job (${out.job_id || jobId}). Đang xử lý...`);
   
           // poll status
           const poll = async () => {

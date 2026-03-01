@@ -4,7 +4,8 @@ import json
 import uuid
 from dataclasses import asdict
 from typing import Any, Optional
-
+import json, time
+from contextlib import suppress
 from werkzeug.datastructures import FileStorage
 
 from app.config import get_config
@@ -145,22 +146,48 @@ class StorageService:
             return json.load(f)
 
     # ---- Progress ----
-    def write_progress(self, job_id: str, payload: dict) -> str:
-        path = self.result_path(job_id, "progress.json")
-        tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(payload or {}, f, ensure_ascii=False, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, path)  # atomic trên Windows
-        return path
+    def _job_dir(self, job_id: str) -> str:
+    # thư mục job nằm trong results/<job_id>
+        cfg = get_config()
+        return os.path.join(cfg.RESULTS_DIR, job_id)
 
+    def _progress_path(self, job_id: str) -> str:
+        return os.path.join(self._job_dir(job_id), "progress.json")
+    
+    def write_progress(self, job_id: str, data: dict):
+        path = self._progress_path(job_id)          # file progress.json
+        tmp  = path + ".tmp"
+
+        # 1) ghi tmp
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        # 2) retry os.replace vì Windows hay lock file
+        last_err = None
+        for _ in range(20):  # ~2s nếu sleep 0.1
+            try:
+                os.replace(tmp, path)
+                return
+            except PermissionError as e:
+                last_err = e
+                time.sleep(0.1)
+
+        # nếu vẫn fail thì raise để log rõ
+        raise last_err
+    
     def read_progress(self, job_id: str) -> dict:
-        path = self.result_path(job_id, "progress.json")
+        path = self._progress_path(job_id)
         if not os.path.isfile(path):
-            return {"state": "created"}
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return {"state": "running", "message": "Reading progress..."}  # hoặc created
+            return {"state": "new"}
+
+        last_err = None
+        for _ in range(10):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, PermissionError) as e:
+                last_err = e
+                time.sleep(0.05)
+
+        # fallback an toàn
+        return {"state": "unknown", "message": f"progress read error: {last_err}"}
