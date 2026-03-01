@@ -30,7 +30,6 @@ EDGE_VOICE_BY_LANG_GENDER = {
     "pt": {"Nữ": "pt-BR-FranciscaNeural",   "Nam": "pt-BR-AntonioNeural"},
 }
 
-
 def get_edge_voice(lang_code: str, gender_label: str) -> Optional[str]:
     try:
         return EDGE_VOICE_BY_LANG_GENDER.get(lang_code, {}).get(gender_label)
@@ -74,7 +73,70 @@ class TTSService:
 
     def __init__(self):
         self.cfg = get_config()
+    def list_builtin_voices(self, lang: str, gender_label: str) -> list[dict]:
+        """
+        List Edge-TTS voices by language + gender.
+        Return: [{ "id": shortName, "name": friendlyName }, ...]
+        """
+        if edge_tts is None:
+            return []
 
+        # Map UI "Nam/Nữ" -> Edge "Male/Female"
+        gender_label = (gender_label or "").strip()
+        want_gender = "Female" if gender_label == "Nữ" else "Male"
+
+        lang = (lang or "vi").strip().lower()
+
+        # prefix theo dropdown của bạn
+        locale_prefix = {
+            "vi": "vi-",
+            "en": "en-",
+            "zh": "zh-",
+            "ja": "ja-",
+            "ko": "ko-",
+            "fr": "fr-",
+            "de": "de-",
+            "es": "es-",
+            "it": "it-",
+            "pt": "pt-",
+        }.get(lang, f"{lang}-")
+
+        try:
+            async def _run():
+                return await edge_tts.list_voices()
+
+            # Flask sync context
+            try:
+                allv = asyncio.run(_run())
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                try:
+                    allv = loop.run_until_complete(_run())
+                finally:
+                    loop.close()
+
+            out: list[dict] = []
+            for v in allv or []:
+                short_name = v.get("ShortName")
+                friendly = v.get("FriendlyName") or short_name
+                locale = (v.get("Locale") or "").lower()
+                gender = v.get("Gender")
+
+                if not short_name:
+                    continue
+                if not locale.startswith(locale_prefix):
+                    continue
+                if gender != want_gender:
+                    continue
+
+                out.append({"id": short_name, "name": friendly})
+
+            out.sort(key=lambda x: (x.get("name") or x.get("id") or ""))
+            return out
+
+        except Exception as e:
+            print("[EdgeTTS] list_voices failed:", repr(e))
+            return []
     # ---------- Clone voice management ----------
     def list_cloned_voice_display_names(self) -> list[str]:
         root = self.cfg.CLONED_VOICES_DIR

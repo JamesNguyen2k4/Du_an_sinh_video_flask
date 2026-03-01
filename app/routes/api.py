@@ -87,7 +87,22 @@ def list_cloned_voices():
     tts = TTSService()
     return jsonify({"voices": tts.list_cloned_voice_display_names()})
 
+@api.get("/voices/builtin")
+def list_builtin_voices():
+    """
+    Trả danh sách giọng Edge TTS theo lang + gender.
+    Query:
+      - lang: vi/en/...
+      - gender: "Nam" | "Nữ"
+    Response:
+      { ok: true, voices: [ {id, name}, ... ] }
+    """
+    lang = (request.args.get("lang") or "vi").strip()
+    gender = (request.args.get("gender") or "Nữ").strip()
 
+    tts = TTSService()
+    voices = tts.list_builtin_voices(lang=lang, gender_label=gender)
+    return jsonify({"ok": True, "voices": voices})
 @api.post("/jobs/<job_id>/extract")
 def extract(job_id: str):
     store = StorageService()

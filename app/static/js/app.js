@@ -58,7 +58,7 @@ async function api(url, opts = {}) {
       storeJobId(jobId);
       return jobId;
     }
-  
+    
     async function refreshCloneList() {
       const data = await api("/api/voices/cloned");
       if (cloneSelect) {
@@ -95,6 +95,32 @@ async function api(url, opts = {}) {
   
     // load clone list sẵn
     refreshCloneList().catch(() => {});
+    async function refreshBuiltinVoices() {
+      const lang = langInput?.value || "vi";
+      const gender = genderInput?.value || "Nữ";
+    
+      // gọi API backend để lấy list voice theo lang + gender
+      const data = await api(`/api/voices/builtin?lang=${encodeURIComponent(lang)}&gender=${encodeURIComponent(gender)}`);
+    
+      if (!builtinVoiceInput) return;
+    
+      const voices = data.voices || [];
+      builtinVoiceInput.innerHTML =
+        `<option value="">-- Tự chọn theo giọng đọc (${gender}) --</option>` +
+        voices.map(v => {
+          // v.id là voice shortName (ex: vi-VN-NamMinhNeural)
+          // v.name là tên hiển thị
+          const label = v.name ? `${v.name} (${v.id})` : v.id;
+          return `<option value="${v.id}">${label}</option>`;
+        }).join("");
+    }
+    
+    // gọi 1 lần lúc load trang
+    refreshBuiltinVoices().catch(() => {});
+    
+    // lắng nghe thay đổi
+    langInput?.addEventListener("change", () => refreshBuiltinVoices().catch(() => {}));
+    genderInput?.addEventListener("change", () => refreshBuiltinVoices().catch(() => {}));
   
     btnNext.addEventListener("click", async () => {
       try {
