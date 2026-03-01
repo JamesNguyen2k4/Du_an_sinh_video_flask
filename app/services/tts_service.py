@@ -162,8 +162,9 @@ class TTSService:
                     # XTTS trả ra wav
                     return xtts.synthesize(text, lang_code, ref_wav)
                 except Exception as e:
-                    print("[XTTS] synth failed:", repr(e))
-                    # fallback builtin tiếp
+                    import traceback
+                    print("[XTTS] synth failed:")
+                    traceback.print_exc()
 
         # builtin path
         return self._builtin_tts_to_mp3(

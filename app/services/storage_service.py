@@ -147,14 +147,20 @@ class StorageService:
     # ---- Progress ----
     def write_progress(self, job_id: str, payload: dict) -> str:
         path = self.result_path(job_id, "progress.json")
-        _ensure_dir(os.path.dirname(path))  
-        with open(path, "w", encoding="utf-8") as f:
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(payload or {}, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)  # atomic trên Windows
         return path
 
     def read_progress(self, job_id: str) -> dict:
         path = self.result_path(job_id, "progress.json")
         if not os.path.isfile(path):
             return {"state": "created"}
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {"state": "running", "message": "Reading progress..."}  # hoặc created

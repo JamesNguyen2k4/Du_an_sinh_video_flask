@@ -3,7 +3,7 @@ import json
 import tempfile
 import time
 from typing import List, Tuple, Optional
-
+import threading
 from pydub import AudioSegment
 from TTS.api import TTS
 
@@ -86,6 +86,49 @@ def create_cloned_voice(reference_mp3_path: str, voices_root: str = "./cloned_vo
 
 
 class XTTSInference:
+    """Singleton wrapper for XTTS-v2 synthesis with reference speaker wav."""
+
+    _tts = None
+    _lock = threading.Lock()
+
+    def __init__(self, device: Optional[str] = None):
+        self.model_name = XTTS_MODEL_NAME
+
+        # chọn device
+        if device:
+            self.device = device
+        else:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        # load model 1 lần duy nhất
+        with XTTSInference._lock:
+            if XTTSInference._tts is None:
+                XTTSInference._tts = TTS(
+                    model_name=self.model_name,
+                    progress_bar=False,
+                    gpu=(self.device == "cuda"),
+                )
+
+        self.tts = XTTSInference._tts
+
+    def synthesize(self, text: str, language: str, reference_wav_path: str) -> str:
+        if not os.path.isfile(reference_wav_path):
+            raise FileNotFoundError(f"reference_wav not found: {reference_wav_path}")
+
+        language = (language or "vi").strip().lower()
+
+        out_wav = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+        out_path = out_wav.name
+        out_wav.close()
+
+        # ⚠️ Một số bản Coqui TTS/XTTS ổn định hơn khi speaker_wav là LIST
+        self.tts.tts_to_file(
+            text=text,
+            language=language,
+            speaker_wav=[reference_wav_path],
+            file_path=out_path
+        )
+        return out_path
     """Thin wrapper for XTTS-v2 synthesis with reference speaker wav."""
 
     def __init__(self, device: Optional[str] = None):
