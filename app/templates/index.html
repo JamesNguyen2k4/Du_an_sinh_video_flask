@@ -88,7 +88,65 @@
         </div>
       </div>
     </div>
+    <div class="card">
+    <h2>4) Tùy chỉnh cơ bản</h2>
 
+    <div class="grid">
+      <div>
+        <label for="speech_rate">Tốc độ đọc</label>
+        <input
+          id="speech_rate"
+          type="number"
+          min="0.5"
+          max="2.0"
+          step="0.1"
+          value="1.0"
+        />
+        <small>1.0 = bình thường, 0.8 = chậm hơn, 1.2 = nhanh hơn</small>
+      </div>
+
+      <div>
+      <label for="preprocess_type" class="label-with-help">
+        Kiểu xử lý ảnh
+        <button type="button" id="preprocess_help_btn" class="help-btn">?</button>
+      </label>
+
+      <select id="preprocess_type">
+        <option value="crop" selected>crop</option>
+        <option value="resize">resize</option>
+        <option value="full">full</option>
+        <option value="extcrop">extcrop</option>
+        <option value="extfull">extfull</option>
+      </select>
+
+      <small>Nên để crop nếu ảnh chân dung bình thường</small>
+
+      <div id="preprocess_help_popup" class="help-popup hidden">
+        <div class="help-popup-content">
+          <div class="help-popup-header">
+            <strong>Xem trước kiểu xử lý ảnh</strong>
+            <button type="button" id="preprocess_help_close" class="help-close">×</button>
+          </div>
+
+          <div class="help-tabs">
+            <button type="button" class="help-tab active" data-mode="crop">crop</button>
+            <button type="button" class="help-tab" data-mode="resize">resize</button>
+            <button type="button" class="help-tab" data-mode="full">full</button>
+            <button type="button" class="help-tab" data-mode="extcrop">extcrop</button>
+            <button type="button" class="help-tab" data-mode="extfull">extfull</button>
+          </div>
+
+          <div class="help-preview">
+            <img id="preprocess_preview_img" src="/static/img/preprocess/crop.png" alt="Preview preprocess" />
+            <p id="preprocess_preview_text">
+              Crop: cắt tập trung vào khuôn mặt, phù hợp nhất với ảnh chân dung thông thường.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+    </div>
     <div class="card actions">
       <button id="btn-next" type="button" class="primary">Tiếp tục (sang Editor)</button>
       <p id="status" class="status"></p>

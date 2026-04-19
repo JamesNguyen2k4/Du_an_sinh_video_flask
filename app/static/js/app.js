@@ -49,7 +49,8 @@ async function api(url, opts = {}) {
     const cloneBtn = qs("#btn-clone");            // nút "Tạo giọng clone"
     const cloneSelect = qs("#cloned_voice_name"); // select
     const clonedLang = qs("#cloned_lang");        // select
-  
+    const speechRateInput = qs("#speech_rate");
+    const preprocessTypeInput = qs("#preprocess_type");
     let jobId = loadJobId();
   
     async function createNewJob() {
@@ -58,7 +59,79 @@ async function api(url, opts = {}) {
       storeJobId(jobId);
       return jobId;
     }
-    
+    const preprocessHelpBtn = qs("#preprocess_help_btn");
+    const preprocessHelpPopup = qs("#preprocess_help_popup");
+    const preprocessHelpClose = qs("#preprocess_help_close");
+    const preprocessPreviewImg = qs("#preprocess_preview_img");
+    const preprocessPreviewText = qs("#preprocess_preview_text");
+    const preprocessTabs = document.querySelectorAll(".help-tab");
+
+    const preprocessPreviewMap = {
+      crop: {
+        img: "/static/img/preprocess/crop.png",
+        text: "Crop: cắt tập trung vào khuôn mặt, phù hợp nhất với ảnh chân dung thông thường."
+      },
+      resize: {
+        img: "/static/img/preprocess/resize.png",
+        text: "Resize: giữ toàn bộ ảnh gốc, phù hợp khi muốn lấy cả khung hình nhưng hiệu quả bám mặt có thể kém hơn."
+      },
+      full: {
+        img: "/static/img/preprocess/full.png",
+        text: "Full: giữ vùng ảnh rộng hơn crop, phù hợp khi muốn lấy thêm phần đầu và vai."
+      },
+      extcrop: {
+        img: "/static/img/preprocess/extcrop.png",
+        text: "Extcrop: tương tự crop nhưng khung cắt rộng hơn một chút."
+      },
+      extfull: {
+        img: "/static/img/preprocess/extfull.png",
+        text: "Extfull: tương tự full nhưng mở rộng vùng lấy ảnh thêm nữa."
+      }
+    };
+
+    function setPreprocessPreview(mode) {
+      const item = preprocessPreviewMap[mode];
+      if (!item) return;
+
+      if (preprocessPreviewImg) preprocessPreviewImg.src = item.img;
+      if (preprocessPreviewText) preprocessPreviewText.textContent = item.text;
+
+      preprocessTabs.forEach(tab => {
+        tab.classList.toggle("active", tab.dataset.mode === mode);
+      });
+    }
+
+    if (preprocessHelpBtn && preprocessHelpPopup) {
+      preprocessHelpBtn.addEventListener("click", () => {
+        const currentMode = preprocessTypeInput?.value || "crop";
+        setPreprocessPreview(currentMode);
+        preprocessHelpPopup.classList.remove("hidden");
+      });
+    }
+
+    if (preprocessHelpClose && preprocessHelpPopup) {
+      preprocessHelpClose.addEventListener("click", () => {
+        preprocessHelpPopup.classList.add("hidden");
+      });
+    }
+
+    if (preprocessHelpPopup) {
+      preprocessHelpPopup.addEventListener("click", (e) => {
+        if (e.target === preprocessHelpPopup) {
+          preprocessHelpPopup.classList.add("hidden");
+        }
+      });
+    }
+
+    preprocessTabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        setPreprocessPreview(tab.dataset.mode);
+      });
+    });
+
+    preprocessTypeInput?.addEventListener("change", () => {
+      setPreprocessPreview(preprocessTypeInput.value);
+    });
     async function refreshCloneList() {
       const data = await api("/api/voices/cloned");
       if (cloneSelect) {
@@ -147,6 +220,8 @@ async function api(url, opts = {}) {
           builtin_voice: builtinVoiceInput?.value || null,
           cloned_voice_name: cloneSelect?.value || null,
           cloned_lang: clonedLang?.value || null,
+          speech_rate: parseFloat(speechRateInput?.value || "1.0"),
+          preprocess_type: preprocessTypeInput?.value || "crop",
         };
   
         setText(status, "Đang lưu cấu hình...");

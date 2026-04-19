@@ -35,7 +35,15 @@ def get_edge_voice(lang_code: str, gender_label: str) -> Optional[str]:
         return EDGE_VOICE_BY_LANG_GENDER.get(lang_code, {}).get(gender_label)
     except Exception:
         return None
+def _edge_rate_from_float(speed: float) -> str:
+    try:
+        speed = float(speed)
+    except Exception:
+        speed = 1.0
 
+    speed = max(0.5, min(2.0, speed))
+    percent = int((speed - 1.0) * 100)
+    return f"{percent:+d}%"
 
 def _ensure_dir(p: str) -> None:
     os.makedirs(p, exist_ok=True)
@@ -54,15 +62,15 @@ def _tmp_audio_path(suffix: str) -> str:
 @dataclass
 class TTSRequest:
     text: str
-    language: str = "vi"              # nội dung
-    gender: str = "Nữ"                # Edge voice selection
+    language: str = "vi"
+    gender: str = "Nữ"
     preferred_voice: Optional[str] = None
+    speech_rate: float = 1.0
 
     # Voice mode
-    voice_mode: str = "builtin"       # "builtin" | "clone"
+    voice_mode: str = "builtin"
     cloned_voice_name: Optional[str] = None
-    cloned_lang: Optional[str] = None # lang cho XTTS
-
+    cloned_lang: Optional[str] = None
 
 class TTSService:
     """
@@ -234,9 +242,17 @@ class TTSService:
             language=language,
             gender=gender,
             preferred_voice=req.preferred_voice,
+            speech_rate=req.speech_rate,
         )
 
-    def _builtin_tts_to_mp3(self, text: str, language: str, gender: str, preferred_voice: Optional[str]) -> Optional[str]:
+    def _builtin_tts_to_mp3(
+            self,
+            text: str,
+            language: str,
+            gender: str,
+            preferred_voice: Optional[str],
+            speech_rate: float = 1.0
+        ) -> Optional[str]:
         out_path = _tmp_audio_path(".mp3")
         voice = preferred_voice or get_edge_voice(language, gender)
 
@@ -246,7 +262,7 @@ class TTSService:
                     communicate = edge_tts.Communicate(
                         text=text,
                         voice=voice,
-                        rate="+0%",
+                        rate=_edge_rate_from_float(speech_rate),
                         volume="+0%"
                     )
                     await communicate.save(out_path)
